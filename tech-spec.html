@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post-Checkout Upsell Engine — Technical Spec</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --ink: #1a1a1a;
+  --ink2: #4a4a4a;
+  --muted: #7a7a7a;
+  --border: #e2e0dc;
+  --accent: #0052cc;
+  --accent-bg: #e6effa;
+  --green: #006644;
+  --green-bg: #e3fcef;
+  --red: #bf2600;
+  --red-bg: #ffebe6;
+  --orange: #974f0c;
+  --orange-bg: #fff7e6;
+  --purple: #5243aa;
+  --purple-bg: #eae6ff;
+  --teal: #008da6;
+  --teal-bg: #e6fcff;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --serif: 'IBM Plex Serif', serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14.5px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 40px 32px 100px;
+}
+
+/* Header */
+.doc-header {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 20px;
+  margin-bottom: 36px;
+}
+.doc-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.doc-header h1 {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.doc-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+.doc-meta strong { color: var(--ink); }
+
+/* TOC */
+.toc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin-bottom: 36px;
+}
+.toc h3 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.toc ol {
+  list-style: none;
+  counter-reset: toc;
+}
+.toc ol li {
+  counter-increment: toc;
+  padding: 4px 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.toc ol li::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-right: 10px;
+  font-weight: 600;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 40px;
+}
+.sec-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+.section h2 {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.section h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 18px 0 8px;
+  color: var(--ink);
+}
+.section p { margin-bottom: 10px; }
+
+/* Scope badges */
+.scope-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+.scope-p1 { background: var(--green-bg); color: var(--green); }
+.scope-p2 { background: var(--orange-bg); color: var(--orange); }
+.scope-future { background: var(--purple-bg); color: var(--purple); }
+
+/* Flow diagrams */
+.flow-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.flow-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* Sequence steps */
+.seq-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.seq-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 0;
+  position: relative;
+}
+.seq-step::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--border);
+}
+.seq-step:last-child::before { display: none; }
+.seq-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.seq-num.blue { background: var(--accent-bg); color: var(--accent); }
+.seq-num.green { background: var(--green-bg); color: var(--green); }
+.seq-num.orange { background: var(--orange-bg); color: var(--orange); }
+.seq-num.purple { background: var(--purple-bg); color: var(--purple); }
+.seq-num.teal { background: var(--teal-bg); color: var(--teal); }
+.seq-body { flex: 1; padding-top: 4px; }
+.seq-label {
+  font-weight: 700;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
+.seq-detail {
+  font-size: 13px;
+  color: var(--ink2);
+}
+.seq-api {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: #f0f0ed;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 13px;
+}
+thead th {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+thead th:first-child { border-radius: 4px 0 0 0; }
+thead th:last-child { border-radius: 0 4px 0 0; }
+tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tbody tr:nth-child(even) { background: #fafaf8; }
+code, .mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #f0f0ed;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Callout boxes */
+.callout {
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin: 14px 0;
+  font-size: 13.5px;
+  border-left: 4px solid;
+}
+.callout-blue { background: var(--accent-bg); border-color: var(--accent); }
+.callout-green { background: var(--green-bg); border-color: var(--green); }
+.callout-red { background: var(--red-bg); border-color: var(--red); }
+.callout-orange { background: var(--orange-bg); border-color: var(--orange); }
+.callout-purple { background: var(--purple-bg); border-color: var(--purple); }
+.callout strong { font-weight: 700; }
+
+/* Use case / Edge case cards */
+.case-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 14px 0;
+}
+.case-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.case-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.case-id.uc { background: var(--green-bg); color: var(--green); }
+.case-id.ec { background: var(--red-bg); color: var(--red); }
+.case-content h4 {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.case-content p {
+  font-size: 12.5px;
+  color: var(--ink2);
+  margin: 0;
+}
+
+/* DB schema */
+.schema-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 6px;
+  padding: 18px 20px;
+  margin: 14px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+.schema-block .kw { color: #89b4fa; }
+.schema-block .type { color: #a6e3a1; }
+.schema-block .comment { color: #6c7086; font-style: italic; }
+.schema-block .table-name { color: #f9e2af; font-weight: 600; }
+.schema-block .constraint { color: #fab387; }
+
+/* Swimlane diagram */
+.swimlane {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.swim-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr 1fr 1fr;
+  gap: 0;
+  min-width: 700px;
+}
+.swim-header {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 8px 6px;
+  border-bottom: 2px solid var(--ink);
+}
+.swim-header.label { text-align: left; }
+.swim-row-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+.swim-cell {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.swim-node {
+  font-size: 10.5px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.swim-node.action { background: var(--accent-bg); color: var(--accent); border: 1px solid #b3d4ff; }
+.swim-node.pg { background: var(--green-bg); color: var(--green); border: 1px solid #abf5d1; }
+.swim-node.shopify { background: var(--purple-bg); color: var(--purple); border: 1px solid #c0b6f2; }
+.swim-node.db { background: var(--orange-bg); color: var(--orange); border: 1px solid #ffc400; }
+.swim-node.empty { background: transparent; border: none; }
+
+/* Phase box */
+.phase-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin: 10px 0;
+}
+.phase-box h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.phase-box ul {
+  list-style: none;
+  padding: 0;
+}
+.phase-box ul li {
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--ink2);
+  padding-left: 18px;
+  position: relative;
+}
+.phase-box ul li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+@media print {
+  body { font-size: 12px; }
+  .page { padding: 20px; }
+  .section { page-break-inside: avoid; }
+}
+@media (max-width: 640px) {
+  .page { padding: 20px 16px; }
+  .swim-grid { min-width: 600px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="doc-header">
+  <div class="doc-label">Technical Specification · v1.0</div>
+  <h1>Post-Checkout Upsell Engine on GoKwik Thank You Page</h1>
+  <div class="doc-meta">
+    <strong>Scope:</strong> Single-brand upsell · Prepaid orders only · GoKwik-hosted TY page &nbsp;|&nbsp;
+    <strong>Date:</strong> April 2026 &nbsp;|&nbsp;
+    <strong>Status:</strong> Ready for Dev Review
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li>Scope & Constraints</li>
+    <li>End-to-End Happy Path Flow</li>
+    <li>API Sequence — Step by Step</li>
+    <li>System Architecture — Service Interaction Map</li>
+    <li>Database Schema Changes</li>
+    <li>Payment Engine — Multi-Transaction per Order</li>
+    <li>Shopify Sync — Order Edit + Transaction Push</li>
+    <li>Thank You Page — Frontend Contract</li>
+    <li>Use Cases (10)</li>
+    <li>Edge Cases & Failure Scenarios (15)</li>
+    <li>Phase Roadmap</li>
+  </ol>
+</div>
+
+<!-- SECTION 1 -->
+<div class="section">
+  <div class="sec-num">SECTION 01</div>
+  <h2>Scope & Constraints</h2>
+
+  <table>
+    <thead>
+      <tr><th>Dimension</th><th>Phase 1 (This Build)</th><th>Future Phases</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Brand model</strong></td><td>Single-brand only (e.g. Levi's → Levi's products)</td><td>Cross-brand marketplace upsell</td></tr>
+      <tr><td><strong>Payment type</strong></td><td>Prepaid orders only (UPI, Card, Wallet, NB)</td><td>COD orders (upsell via COD or prepaid)</td></tr>
+      <tr><td><strong>TY page</strong></td><td>GoKwik-hosted TY page (replaces Shopify TY for all merchants)</td><td>—</td></tr>
+      <tr><td><strong>Recommendation</strong></td><td>Existing static rule engine (manual product/collection selection)</td><td>ML-based dynamic recommendations</td></tr>
+      <tr><td><strong>Order edit</strong></td><td>Shopify Order Edit API (add item to existing order)</td><td>—</td></tr>
+      <tr><td><strong>PG</strong></td><td>Existing PGs — Easebuzz, PayU (new txn ID per upsell)</td><td>—</td></tr>
+      <tr><td><strong>Upsell limit</strong></td><td>1 upsell offer per TY page load (carousel of configured products)</td><td>Multi-step upsell funnels (upsell + downsell)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-blue">
+    <strong>Key architectural principle:</strong> The upsell creates a NEW payment transaction (different txn ID, possibly different payment method) but appends to the SAME Shopify order ID. The GoKwik system is the orchestrator that glues recommendation → payment → order edit → Shopify sync → analytics.
+  </div>
+</div>
+
+<!-- SECTION 2 -->
+<div class="section">
+  <div class="sec-num">SECTION 02</div>
+  <h2>End-to-End Happy Path Flow</h2>
+  <p>This is the golden path — user completes checkout, sees an upsell, accepts, pays, and the item is added to their existing order.</p>
+
+  <div class="flow-container">
+    <div class="flow-title">Happy Path — 12 Steps</div>
+    <div class="seq-flow">
+
+      <div class="seq-step">
+        <div class="seq-num blue">01</div>
+        <div class="seq-body">
+          <div class="seq-label">User completes checkout & original payment succeeds</div>
+          <div class="seq-detail">Original order created on Shopify via GoKwik. Payment captured via Easebuzz/PayU. Order status: <code>PAID</code>. GoKwik stores <code>gokwik_order_id</code>, <code>shopify_order_id</code>, <code>original_payment_id</code>.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num blue">02</div>
+        <div class="seq-body">
+          <div class="seq-label">User redirected to GoKwik Thank You Page</div>
+          <div class="seq-detail">TY page loads at <code>*.addons.gokwik.co/thank-you</code>. Page receives: <code>gokwik_order_id</code>, <code>shopify_order_id</code>, <code>merchant_id</code>, order total, items purchased.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num green">03</div>
+        <div class="seq-body">
+          <div class="seq-label">TY page calls GoKwik Upsell API</div>
+          <div class="seq-detail"><span class="seq-api">GET /api/v1/upsell/recommendations?order_id={gokwik_order_id}&merchant_id={merchant_id}</span><br>Backend fetches applicable upsell rules from the rule engine config. Filters by: product/collection purchased, carousel item count. Returns list of upsell products with images, prices, variants, and discount (if configured).</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num green">04</div>
+        <div class="seq-body">
+          <div class="seq-label">TY page renders upsell carousel below order summary</div>
+          <div class="seq-detail">User sees: order confirmation ✓ at top → order summary → <strong>upsell section</strong> ("Complete Your Look" / "You May Also Like") with product card(s), price, variant selector, "Add to Order" CTA.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num orange">05</div>
+        <div class="seq-body">
+          <div class="seq-label">User clicks "Add to Order"</div>
+          <div class="seq-detail">Frontend sends: <span class="seq-api">POST /api/v1/upsell/initiate</span> with <code>gokwik_order_id</code>, <code>upsell_product_id</code>, <code>variant_id</code>, <code>quantity</code>, <code>upsell_price</code>. Backend validates inventory, price, and creates an <code>upsell_session</code> record with status <code>INITIATED</code>.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num orange">06</div>
+        <div class="seq-body">
+          <div class="seq-label">GoKwik backend initiates PG call for upsell amount</div>
+          <div class="seq-detail">Calls Easebuzz/PayU with: <code>upsell_amount</code> (only the incremental amount), <code>upsell_txn_id</code> (new unique ID like <code>KWIK_UPSELL_{order_id}_{timestamp}</code>), customer email, phone. Returns PG payment link/SDK init params.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num orange">07</div>
+        <div class="seq-body">
+          <div class="seq-label">User completes payment on TY page itself</div>
+          <div class="seq-detail">PG inline/popup payment flow (UPI, Card, etc.) — user can choose a DIFFERENT method than original order. On success, PG sends callback/webhook to GoKwik with <code>upsell_payment_id</code>, amount, status, method.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num purple">08</div>
+        <div class="seq-body">
+          <div class="seq-label">GoKwik receives PG success → Calls Shopify Order Edit API</div>
+          <div class="seq-detail">
+            <strong>Step 8a:</strong> <span class="seq-api">POST orderEditBegin(id: shopify_order_id)</span> → returns <code>calculatedOrder</code> ID<br>
+            <strong>Step 8b:</strong> <span class="seq-api">POST orderEditAddVariant(variant_id, quantity)</span> → appends item<br>
+            <strong>Step 8c:</strong> <span class="seq-api">POST orderEditCommit()</span> → finalizes edit. Order now has original items + upsell item.
+          </div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num purple">09</div>
+        <div class="seq-body">
+          <div class="seq-label">Push upsell transaction to Shopify</div>
+          <div class="seq-detail"><span class="seq-api">POST /admin/api/orders/{shopify_order_id}/transactions.json</span> with <code>kind: "capture"</code>, <code>amount: upsell_amount</code>, <code>gateway: "manual"</code> (or custom name). This creates a second transaction record on the same Shopify order — merchant sees both payments on the order details page.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num teal">10</div>
+        <div class="seq-body">
+          <div class="seq-label">GoKwik stores all records internally</div>
+          <div class="seq-detail">Update <code>upsell_sessions</code> status → <code>COMPLETED</code>. Insert into <code>upsell_transactions</code>. Update <code>upsell_analytics</code> (offer shown → accepted → paid → order edited). Link: <code>gokwik_order_id</code> ↔ <code>original_payment_id</code> ↔ <code>upsell_payment_id</code> ↔ <code>shopify_order_id</code>.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num teal">11</div>
+        <div class="seq-body">
+          <div class="seq-label">TY page updates in real-time</div>
+          <div class="seq-detail">Frontend receives success callback → updates order summary to show original items + upsell item + revised total. Upsell section changes to "Added to your order ✓" confirmation state. CTA disabled to prevent re-submission.</div>
+        </div>
+      </div>
+
+      <div class="seq-step">
+        <div class="seq-num teal">12</div>
+        <div class="seq-body">
+          <div class="seq-label">Merchant sees unified order in Shopify Admin</div>
+          <div class="seq-detail">On the Shopify order details page: all items (original + upsell) under one order ID, two transaction records (original payment + upsell payment), standard fulfillment workflow — ship everything together.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3 -->
+<div class="section">
+  <div class="sec-num">SECTION 03</div>
+  <h2>API Sequence — Service-Level Interactions</h2>
+  <p>Every API call between systems, in the exact order they fire. This is what the dev team needs to implement.</p>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Caller → Receiver</th><th>API / Action</th><th>Payload (key fields)</th><th>Response</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1</strong></td>
+        <td>TY Frontend → GoKwik Backend</td>
+        <td><code>GET /upsell/recommendations</code></td>
+        <td><code>gokwik_order_id, merchant_id, product_ids[]</code> (items in order)</td>
+        <td>Array of upsell products with variant info, price, discount, image URLs</td>
+      </tr>
+      <tr>
+        <td><strong>2</strong></td>
+        <td>GoKwik Backend → Rule Engine DB</td>
+        <td>Internal query</td>
+        <td>Match merchant's upsell rules against purchased products/collections</td>
+        <td>Filtered product list passing rule criteria</td>
+      </tr>
+      <tr>
+        <td><strong>3</strong></td>
+        <td>GoKwik Backend → Shopify</td>
+        <td><code>GET /admin/api/products/{id}/variants</code></td>
+        <td>Fetch real-time inventory + price for upsell candidates</td>
+        <td>Variant details, <code>inventory_quantity</code>, price</td>
+      </tr>
+      <tr>
+        <td><strong>4</strong></td>
+        <td>TY Frontend → GoKwik Backend</td>
+        <td><code>POST /upsell/initiate</code></td>
+        <td><code>gokwik_order_id, product_id, variant_id, qty, amount</code></td>
+        <td><code>upsell_session_id</code>, PG init params (link/token)</td>
+      </tr>
+      <tr>
+        <td><strong>5</strong></td>
+        <td>GoKwik Backend → Easebuzz/PayU</td>
+        <td>PG Init API</td>
+        <td><code>txn_id: KWIK_UPSELL_{order}_{ts}</code>, amount, customer details, callback URL</td>
+        <td>Payment link / SDK access key</td>
+      </tr>
+      <tr>
+        <td><strong>6</strong></td>
+        <td>TY Frontend → PG SDK</td>
+        <td>PG inline/popup</td>
+        <td>User selects UPI/Card/Wallet, completes payment</td>
+        <td>PG success/failure response</td>
+      </tr>
+      <tr>
+        <td><strong>7</strong></td>
+        <td>Easebuzz/PayU → GoKwik Backend</td>
+        <td>PG Webhook</td>
+        <td><code>payment_id, txn_id, amount, method, provider, status</code></td>
+        <td>ACK</td>
+      </tr>
+      <tr>
+        <td><strong>8a</strong></td>
+        <td>GoKwik Backend → Shopify</td>
+        <td><code>POST orderEditBegin</code> (GraphQL)</td>
+        <td><code>id: "gid://shopify/Order/{shopify_order_id}"</code></td>
+        <td><code>calculatedOrder.id</code></td>
+      </tr>
+      <tr>
+        <td><strong>8b</strong></td>
+        <td>GoKwik Backend → Shopify</td>
+        <td><code>POST orderEditAddVariant</code> (GraphQL)</td>
+        <td><code>calculatedOrder.id, variant_id, quantity</code></td>
+        <td>Updated calculated line items</td>
+      </tr>
+      <tr>
+        <td><strong>8c</strong></td>
+        <td>GoKwik Backend → Shopify</td>
+        <td><code>POST orderEditCommit</code> (GraphQL)</td>
+        <td><code>calculatedOrder.id, notifyCustomer: false, staffNote: "GoKwik Upsell"</code></td>
+        <td>Committed order with new line item</td>
+      </tr>
+      <tr>
+        <td><strong>9</strong></td>
+        <td>GoKwik Backend → Shopify</td>
+        <td><code>POST /orders/{id}/transactions.json</code> (REST)</td>
+        <td><code>kind: "capture", amount, gateway: "gokwik_upsell", authorization: upsell_payment_id</code></td>
+        <td>Transaction ID on Shopify</td>
+      </tr>
+      <tr>
+        <td><strong>10</strong></td>
+        <td>GoKwik Backend → GoKwik DB</td>
+        <td>Internal writes</td>
+        <td>Update <code>upsell_sessions</code>, insert <code>upsell_transactions</code>, insert <code>upsell_analytics</code></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>11</strong></td>
+        <td>GoKwik Backend → TY Frontend</td>
+        <td>Webhook/SSE/Polling response</td>
+        <td><code>status: "SUCCESS", updated_order_total, upsell_item_details</code></td>
+        <td>Frontend renders updated order summary</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 4 -->
+<div class="section">
+  <div class="sec-num">SECTION 04</div>
+  <h2>System Architecture — Service Interaction Map</h2>
+  <p>Five systems interact in this flow. Here's which owns what:</p>
+
+  <table>
+    <thead>
+      <tr><th>System</th><th>Owns</th><th>Key APIs</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>GoKwik TY Frontend</strong></td>
+        <td>UI rendering, upsell carousel, PG SDK integration, real-time order summary update</td>
+        <td>Calls GoKwik Backend APIs, renders PG inline flow</td>
+      </tr>
+      <tr>
+        <td><strong>GoKwik Backend (Orchestrator)</strong></td>
+        <td>Upsell session management, rule engine query, PG initiation, Shopify sync, analytics writes</td>
+        <td><code>/upsell/recommendations</code>, <code>/upsell/initiate</code>, <code>/upsell/callback</code>, internal Shopify sync workers</td>
+      </tr>
+      <tr>
+        <td><strong>Rule Engine (Existing)</strong></td>
+        <td>Merchant-configured upsell rules — product selection, collection mapping, carousel count, discount config</td>
+        <td>Internal DB queries against <code>upsell_rules</code> table</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Gateway (Easebuzz/PayU)</strong></td>
+        <td>Payment processing for upsell amount. New transaction ID. Possibly different payment method than original.</td>
+        <td>PG Init, PG Webhook/Callback, PG Status Check</td>
+      </tr>
+      <tr>
+        <td><strong>Shopify Admin API</strong></td>
+        <td>Order of record. Order Edit API for appending items. Transaction API for recording payment.</td>
+        <td><code>orderEditBegin</code>, <code>orderEditAddVariant</code>, <code>orderEditCommit</code>, <code>POST /transactions.json</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-blue">
+    <strong>Critical design decision — Sync strategy:</strong> The Shopify Order Edit + Transaction push (Steps 8–9) should be executed as an <strong>async background job with retry logic</strong>, NOT synchronously in the PG callback. Reason: Shopify API has rate limits (40 requests/second per app) and can be slow. The user should see success on the TY page as soon as PG payment succeeds. The Shopify sync can happen in the background within seconds. If it fails, retry queue picks it up. The <code>upsell_sessions</code> table tracks the state: <code>PG_SUCCESS → SHOPIFY_EDIT_PENDING → SHOPIFY_EDIT_DONE → SHOPIFY_TXN_PUSHED → COMPLETED</code>.
+  </div>
+</div>
+
+<!-- SECTION 5 -->
+<div class="section">
+  <div class="sec-num">SECTION 05</div>
+  <h2>Database Schema Changes</h2>
+  <p>Three new tables, one modified table. This is additive — no existing table structures break.</p>
+
+  <h3>New Table: <code>upsell_sessions</code></h3>
+  <div class="schema-block"><span class="kw">CREATE TABLE</span> <span class="table-name">upsell_sessions</span> (
+  id                    <span class="type">UUID</span> <span class="constraint">PRIMARY KEY</span>,
+  gokwik_order_id       <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,     <span class="comment">-- FK to orders table</span>
+  shopify_order_id      <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,
+  merchant_id           <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,
+  upsell_product_id     <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,     <span class="comment">-- Shopify product ID</span>
+  upsell_variant_id     <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,     <span class="comment">-- Shopify variant ID</span>
+  upsell_quantity       <span class="type">INT</span> <span class="constraint">DEFAULT 1</span>,
+  upsell_amount         <span class="type">DECIMAL(10,2)</span> <span class="constraint">NOT NULL</span>,    <span class="comment">-- amount charged for upsell</span>
+  upsell_discount       <span class="type">DECIMAL(10,2)</span> <span class="constraint">DEFAULT 0</span>,   <span class="comment">-- if discount configured</span>
+  original_payment_id   <span class="type">VARCHAR(64)</span>,                 <span class="comment">-- original order payment ref</span>
+  upsell_payment_id     <span class="type">VARCHAR(64)</span>,                 <span class="comment">-- PG payment ID for upsell</span>
+  upsell_txn_id         <span class="type">VARCHAR(128)</span>,                <span class="comment">-- our txn ID sent to PG</span>
+  payment_method        <span class="type">VARCHAR(32)</span>,                 <span class="comment">-- upi/card/wallet/nb</span>
+  payment_provider      <span class="type">VARCHAR(32)</span>,                 <span class="comment">-- easebuzz/payu</span>
+  status                <span class="type">VARCHAR(32)</span> <span class="constraint">NOT NULL</span>,      <span class="comment">-- see state machine below</span>
+  shopify_edit_id       <span class="type">VARCHAR(64)</span>,                 <span class="comment">-- Shopify calculatedOrder ID</span>
+  shopify_txn_id        <span class="type">VARCHAR(64)</span>,                 <span class="comment">-- Shopify transaction ID created</span>
+  error_message         <span class="type">TEXT</span>,
+  retry_count           <span class="type">INT</span> <span class="constraint">DEFAULT 0</span>,
+  created_at            <span class="type">TIMESTAMP</span> <span class="constraint">DEFAULT NOW()</span>,
+  updated_at            <span class="type">TIMESTAMP</span> <span class="constraint">DEFAULT NOW()</span>,
+
+  <span class="constraint">INDEX</span> idx_order (gokwik_order_id),
+  <span class="constraint">INDEX</span> idx_merchant_status (merchant_id, status),
+  <span class="constraint">INDEX</span> idx_created (created_at)
+);</div>
+
+  <h3>State Machine for <code>upsell_sessions.status</code></h3>
+  <table>
+    <thead><tr><th>Status</th><th>Meaning</th><th>Next Valid States</th></tr></thead>
+    <tbody>
+      <tr><td><code>INITIATED</code></td><td>User clicked "Add to Order", PG call about to fire</td><td>PG_PENDING, EXPIRED, CANCELLED</td></tr>
+      <tr><td><code>PG_PENDING</code></td><td>PG SDK opened, waiting for payment</td><td>PG_SUCCESS, PG_FAILED, PG_TIMEOUT</td></tr>
+      <tr><td><code>PG_SUCCESS</code></td><td>Payment received, Shopify edit not yet started</td><td>SHOPIFY_EDIT_PENDING</td></tr>
+      <tr><td><code>PG_FAILED</code></td><td>Payment failed — show error, allow retry</td><td>INITIATED (retry)</td></tr>
+      <tr><td><code>PG_TIMEOUT</code></td><td>No callback within 10 min — check PG status API</td><td>PG_SUCCESS, PG_FAILED</td></tr>
+      <tr><td><code>SHOPIFY_EDIT_PENDING</code></td><td>Background job picked up, Shopify edit in progress</td><td>SHOPIFY_EDIT_DONE, SHOPIFY_EDIT_FAILED</td></tr>
+      <tr><td><code>SHOPIFY_EDIT_DONE</code></td><td>Item appended to order, pushing transaction next</td><td>COMPLETED, SHOPIFY_TXN_FAILED</td></tr>
+      <tr><td><code>SHOPIFY_EDIT_FAILED</code></td><td>Shopify edit failed — trigger auto-refund</td><td>REFUND_INITIATED</td></tr>
+      <tr><td><code>COMPLETED</code></td><td>Fully done — item added, payment recorded on Shopify</td><td>—</td></tr>
+      <tr><td><code>REFUND_INITIATED</code></td><td>PG was charged but Shopify edit failed, refunding</td><td>REFUNDED</td></tr>
+    </tbody>
+  </table>
+
+  <h3>New Table: <code>upsell_offers_log</code> (Analytics)</h3>
+  <div class="schema-block"><span class="kw">CREATE TABLE</span> <span class="table-name">upsell_offers_log</span> (
+  id                    <span class="type">UUID</span> <span class="constraint">PRIMARY KEY</span>,
+  gokwik_order_id       <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,
+  merchant_id           <span class="type">VARCHAR(64)</span> <span class="constraint">NOT NULL</span>,
+  rule_id               <span class="type">VARCHAR(64)</span>,                 <span class="comment">-- which upsell rule fired</span>
+  products_shown        <span class="type">JSONB</span>,                       <span class="comment">-- [{product_id, variant_id, price}]</span>
+  product_accepted      <span class="type">VARCHAR(64)</span>,                 <span class="comment">-- NULL if declined/ignored</span>
+  impression_at         <span class="type">TIMESTAMP</span>,                   <span class="comment">-- when carousel rendered</span>
+  click_at              <span class="type">TIMESTAMP</span>,                   <span class="comment">-- when "Add to Order" clicked</span>
+  outcome               <span class="type">VARCHAR(16)</span>,                 <span class="comment">-- SHOWN/CLICKED/PAID/IGNORED</span>
+  device_type           <span class="type">VARCHAR(16)</span>,                 <span class="comment">-- mobile/desktop</span>
+  created_at            <span class="type">TIMESTAMP</span> <span class="constraint">DEFAULT NOW()</span>,
+
+  <span class="constraint">INDEX</span> idx_merchant_date (merchant_id, created_at),
+  <span class="constraint">INDEX</span> idx_outcome (outcome)
+);</div>
+
+  <h3>Modified: <code>payments</code> table</h3>
+  <div class="callout callout-orange">
+    <strong>Add column:</strong> <code>payment_type ENUM('original', 'upsell') DEFAULT 'original'</code> — so existing queries continue to work, and upsell payments can be filtered/aggregated separately. Also add: <code>linked_upsell_session_id VARCHAR(64)</code> as FK to <code>upsell_sessions</code>.
+  </div>
+</div>
+
+<!-- SECTION 6 -->
+<div class="section">
+  <div class="sec-num">SECTION 06</div>
+  <h2>Payment Engine — Multi-Transaction per Order</h2>
+
+  <h3>How it works</h3>
+  <p>The original order has Payment ID <code>KWIKG3NYJNM64219984MP</code> for ₹1,212 via UPI on Easebuzz. The user then accepts an upsell for ₹349. A completely new PG session fires:</p>
+
+  <table>
+    <thead><tr><th>Field</th><th>Original Payment</th><th>Upsell Payment</th></tr></thead>
+    <tbody>
+      <tr><td>Payment ID</td><td><code>KWIKG3NYJNM64219984MP</code></td><td><code>KWIK_UP_G3NYJNM_1712645420</code></td></tr>
+      <tr><td>Amount</td><td>₹1,212</td><td>₹349</td></tr>
+      <tr><td>Payment Method</td><td>UPI</td><td>Card (could be different!)</td></tr>
+      <tr><td>Provider</td><td>Easebuzz</td><td>Easebuzz (same PG)</td></tr>
+      <tr><td>Status</td><td>Success</td><td>Success</td></tr>
+      <tr><td>GoKwik Order ID</td><td colspan="2" style="text-align:center"><code>KWIKG3NYJNM64219984MP</code> — <strong>SAME</strong></td></tr>
+      <tr><td>Shopify Order ID</td><td colspan="2" style="text-align:center"><code>#4595912</code> — <strong>SAME</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Transaction ID generation for upsell</h3>
+  <p>Format: <code>KWIK_UP_{original_order_short_id}_{unix_timestamp}</code></p>
+  <p>This ensures uniqueness (timestamp prevents collisions), traceability (contains original order reference), and is identifiable as an upsell transaction by prefix <code>KWIK_UP_</code>.</p>
+
+  <h3>Idempotency</h3>
+  <div class="callout callout-red">
+    <strong>Critical:</strong> Generate an <code>idempotency_key</code> = <code>SHA256(gokwik_order_id + upsell_variant_id + amount)</code> and send it with the PG init call. Store it in <code>upsell_sessions</code>. Before initiating a new PG call, check if a session with this key already exists and is in <code>PG_PENDING</code> or <code>PG_SUCCESS</code> state — if yes, reject the duplicate request. This prevents double charges if the user clicks "Add to Order" multiple times or the page refreshes.
+  </div>
+</div>
+
+<!-- SECTION 7 -->
+<div class="section">
+  <div class="sec-num">SECTION 07</div>
+  <h2>Shopify Sync — Order Edit + Transaction Push</h2>
+
+  <h3>Step 1: Order Edit (GraphQL Admin API)</h3>
+  <p>Uses Shopify's <code>orderEdit*</code> mutations. This is a 3-call sequence that MUST be atomic — if any call fails, the session rolls back.</p>
+
+  <div class="schema-block"><span class="comment">// 8a — Begin edit session</span>
+<span class="kw">mutation</span> {
+  orderEditBegin(id: <span class="type">"gid://shopify/Order/7531867832567"</span>) {
+    calculatedOrder { id }
+    userErrors { field, message }
+  }
+}
+
+<span class="comment">// 8b — Add upsell variant</span>
+<span class="kw">mutation</span> {
+  orderEditAddVariant(
+    id: <span class="type">"gid://shopify/CalculatedOrder/..."</span>,
+    variantId: <span class="type">"gid://shopify/ProductVariant/..."</span>,
+    quantity: <span class="constraint">1</span>
+  ) {
+    calculatedOrder { id addedLineItems { edges { node { title quantity } } } }
+    userErrors { field, message }
+  }
+}
+
+<span class="comment">// 8c — Commit edit</span>
+<span class="kw">mutation</span> {
+  orderEditCommit(
+    id: <span class="type">"gid://shopify/CalculatedOrder/..."</span>,
+    notifyCustomer: <span class="constraint">false</span>,
+    staffNote: <span class="type">"GoKwik Post-Checkout Upsell"</span>
+  ) {
+    order { id name }
+    userErrors { field, message }
+  }
+}</div>
+
+  <h3>Step 2: Transaction Record (REST Admin API)</h3>
+  <p>After order edit commits, push the upsell payment as a transaction on the same order:</p>
+
+  <div class="schema-block"><span class="kw">POST</span> /admin/api/2024-01/orders/{shopify_order_id}/transactions.json
+
+{
+  "transaction": {
+    "kind": <span class="type">"capture"</span>,
+    "amount": <span class="type">"349.00"</span>,
+    "gateway": <span class="type">"gokwik_upsell"</span>,
+    "authorization": <span class="type">"KWIK_UP_G3NYJNM_1712645420"</span>,
+    "source_name": <span class="type">"gokwik"</span>,
+    "currency": <span class="type">"INR"</span>
+  }
+}</div>
+
+  <div class="callout callout-purple">
+    <strong>What the merchant sees on Shopify Admin:</strong> One order with all items (original + upsell), timeline showing "GoKwik Post-Checkout Upsell" note, two transactions in the payment section (original + upsell amount). The order is ready for standard fulfillment — no special handling needed by the merchant.
+  </div>
+
+  <h3>Failure handling</h3>
+  <table>
+    <thead><tr><th>Failure Point</th><th>Impact</th><th>Resolution</th></tr></thead>
+    <tbody>
+      <tr><td><code>orderEditBegin</code> fails</td><td>No edit session created</td><td>Retry 3× with exponential backoff. If still fails → auto-refund upsell payment via PG refund API.</td></tr>
+      <tr><td><code>orderEditAddVariant</code> fails</td><td>Usually inventory issue</td><td>Do NOT commit. Auto-refund. Log reason. Alert merchant.</td></tr>
+      <tr><td><code>orderEditCommit</code> fails</td><td>Edit not persisted</td><td>Retry 3×. If fails → auto-refund. The calculatedOrder expires after ~60 min anyway.</td></tr>
+      <tr><td>Transaction push fails</td><td>Order has the item but no payment record on Shopify</td><td>Retry with backoff. This is non-blocking for fulfillment but important for merchant reconciliation. Mark session <code>SHOPIFY_TXN_FAILED</code> and retry via cron.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 8 -->
+<div class="section">
+  <div class="sec-num">SECTION 08</div>
+  <h2>Thank You Page — Frontend Contract</h2>
+  <p>The GoKwik TY page (like the Levi's example at <code>levis-india-store.addons.gokwik.co</code>) will be extended with an upsell section between the order summary and the footer.</p>
+
+  <h3>Page layout (top to bottom)</h3>
+  <table>
+    <thead><tr><th>Section</th><th>Existing?</th><th>Content</th></tr></thead>
+    <tbody>
+      <tr><td>1. Brand header</td><td>✅ Existing</td><td>Merchant logo, brand bar</td></tr>
+      <tr><td>2. Order confirmation</td><td>✅ Existing</td><td>"Thanks for your order!" + Order ID + Confirmed badge</td></tr>
+      <tr><td>3. Order details</td><td>✅ Existing</td><td>Payment mode, delivery/billing address, contact info</td></tr>
+      <tr><td>4. Order summary</td><td>✅ Existing</td><td>Items, MRP, discount, shipping, total</td></tr>
+      <tr><td><strong>5. Upsell section</strong></td><td>🆕 NEW</td><td>Title ("Complete Your Look") + product carousel + "Add to Order" CTA. See below.</td></tr>
+      <tr><td>6. Trust badges / Footer</td><td>✅ Existing</td><td>"Trusted by X customers", safety alert, powered by GoKwik</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Upsell section — UI states</h3>
+  <table>
+    <thead><tr><th>State</th><th>What user sees</th><th>Trigger</th></tr></thead>
+    <tbody>
+      <tr><td><strong>LOADING</strong></td><td>Skeleton shimmer in upsell area</td><td>Page load, recommendations API in flight</td></tr>
+      <tr><td><strong>OFFERS_SHOWN</strong></td><td>Product card(s) in carousel with image, name, price, variant selector, "Add to Order" button</td><td>Recommendations API returns products</td></tr>
+      <tr><td><strong>NO_OFFERS</strong></td><td>Section hidden entirely (no empty state)</td><td>No applicable rules or all products out of stock</td></tr>
+      <tr><td><strong>PAYMENT_IN_PROGRESS</strong></td><td>CTA shows spinner + "Processing payment..." — disable all other CTAs</td><td>User clicked "Add to Order", PG flow active</td></tr>
+      <tr><td><strong>SUCCESS</strong></td><td>"✓ Added to your order!" — updated order summary shows new item + revised total</td><td>PG success + backend confirms</td></tr>
+      <tr><td><strong>PAYMENT_FAILED</strong></td><td>"Payment failed. Try again?" with retry CTA</td><td>PG callback with failure</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Frontend → Backend API contract</h3>
+  <div class="callout callout-blue">
+    <strong>Recommendations response shape:</strong>
+    <code style="display:block; margin-top:6px; font-size:12px; white-space:pre; line-height:1.5;">
+{
+  "upsell_rule_id": "rule_5",
+  "title": "Complete Your Look",
+  "products": [
+    {
+      "product_id": "8012345678",
+      "title": "Men's 511 Slim Fit Jeans",
+      "image_url": "https://...",
+      "price": 3299.00,
+      "compare_at_price": 4599.00,
+      "discount_pct": 20,
+      "variants": [
+        { "variant_id": "401234", "title": "Navy / 32", "available": true },
+        { "variant_id": "401235", "title": "Navy / 34", "available": false }
+      ]
+    }
+  ]
+}
+    </code>
+  </div>
+</div>
+
+<!-- SECTION 9 -->
+<div class="section">
+  <div class="sec-num">SECTION 09</div>
+  <h2>Use Cases</h2>
+
+  <div class="case-grid">
+    <div class="case-card">
+      <div class="case-id uc">UC-01</div>
+      <div class="case-content">
+        <h4>Happy path — Single upsell, same payment method</h4>
+        <p>User buys Levi's jeans via UPI → sees a belt upsell on TY page → clicks "Add to Order" → pays ₹999 via UPI → belt added to same order → merchant sees 1 order with 2 items and 2 UPI transactions.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-02</div>
+      <div class="case-content">
+        <h4>Happy path — Upsell with different payment method</h4>
+        <p>Original order paid via Credit Card. Upsell paid via UPI. Both payments linked to same GoKwik order ID and same Shopify order. Merchant sees 2 transactions with different methods.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-03</div>
+      <div class="case-content">
+        <h4>Upsell with discount configured</h4>
+        <p>Merchant configures upsell rule with 20% discount. Product MRP ₹545, upsell price ₹436. PG is called for ₹436. Shopify order edit uses the discounted line item price. <code>upsell_discount</code> field stores ₹109.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-04</div>
+      <div class="case-content">
+        <h4>User declines upsell (ignores it)</h4>
+        <p>User lands on TY page → sees upsell carousel → does nothing or scrolls past → leaves page. <code>upsell_offers_log</code> records outcome as <code>SHOWN</code> (impression only). No payment or order edit triggered. Important for conversion rate analytics.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-05</div>
+      <div class="case-content">
+        <h4>Upsell product has variants (size selection)</h4>
+        <p>Upsell product is a T-shirt with sizes S/M/L/XL. Carousel shows variant selector dropdown. User picks "L" → system checks inventory for that specific variant before initiating PG. If "L" is out of stock, variant is greyed out.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-06</div>
+      <div class="case-content">
+        <h4>Multiple products in upsell carousel</h4>
+        <p>Rule configured with carousel count = 3. Three products shown. User can only select and add ONE product per upsell session (Phase 1). After successful add, upsell section shows confirmation. Future phase: allow multiple adds.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-07</div>
+      <div class="case-content">
+        <h4>Upsell rule applies to "All Products"</h4>
+        <p>Merchant selects "Applicable On: All Products" in rule config (as in the screenshot). Every order on TY page shows the configured upsell products regardless of what was purchased. Simple but effective for hero products.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-08</div>
+      <div class="case-content">
+        <h4>Upsell rule applies to "Specific Collections"</h4>
+        <p>Merchant sets upsell rule for "Men's Jeans" collection → only orders containing items from that collection trigger the upsell. Backend matches <code>product.collection_ids</code> against rule config.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-09</div>
+      <div class="case-content">
+        <h4>User revisits TY page (back button / link)</h4>
+        <p>User comes back to TY page after successful upsell. System checks <code>upsell_sessions</code> for this order — finds status <code>COMPLETED</code>. TY page shows the updated order summary (with upsell item) and upsell section in <code>SUCCESS</code> state. No new offer shown. Prevents duplicate upsells.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id uc">UC-10</div>
+      <div class="case-content">
+        <h4>No upsell rules configured for merchant</h4>
+        <p>Recommendations API returns empty array. TY page renders normally without upsell section. <code>upsell_offers_log</code> records nothing — no impression, no click. Page behaves exactly as current production TY page.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 10 -->
+<div class="section">
+  <div class="sec-num">SECTION 10</div>
+  <h2>Edge Cases & Failure Scenarios</h2>
+
+  <div class="case-grid">
+    <div class="case-card">
+      <div class="case-id ec">EC-01</div>
+      <div class="case-content">
+        <h4>PG payment succeeds BUT Shopify Order Edit fails</h4>
+        <p><strong>Most critical edge case.</strong> Money is deducted but item can't be added to order. Resolution: Trigger auto-refund via PG refund API immediately. Set session status <code>REFUND_INITIATED</code>. Send merchant + GoKwik ops alert. User sees "Something went wrong, your payment will be refunded within 5–7 business days."</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-02</div>
+      <div class="case-content">
+        <h4>Inventory depleted between offer shown and payment</h4>
+        <p>User sees product at Step 4, but by Step 8b the variant is OOS on Shopify. <code>orderEditAddVariant</code> will return a <code>userError</code>. Auto-refund the upsell payment. Show user "Sorry, this product just sold out." Log for analytics.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-03</div>
+      <div class="case-content">
+        <h4>User double-clicks "Add to Order"</h4>
+        <p>First click creates <code>upsell_session</code> and generates <code>idempotency_key</code>. Second click hits <code>/upsell/initiate</code> again — backend checks idempotency key, finds existing session in <code>PG_PENDING</code>, rejects with "Payment already in progress." Frontend should also disable the CTA on first click.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-04</div>
+      <div class="case-content">
+        <h4>PG timeout — no callback received within 10 minutes</h4>
+        <p>A cron job scans <code>upsell_sessions</code> where status = <code>PG_PENDING</code> AND <code>created_at < NOW() - 10 min</code>. For each, call the PG Status Check API (Easebuzz/PayU both support this). If successful → proceed with Shopify edit. If failed/not found → mark <code>PG_TIMEOUT</code> and close session.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-05</div>
+      <div class="case-content">
+        <h4>Order already in fulfillment when upsell is attempted</h4>
+        <p>Very fast fulfillment merchant ships within minutes. <code>orderEditBegin</code> will fail if order has any fulfilled line items. Mitigation: Before showing upsell, check order fulfillment status. If any item is already fulfilled, skip upsell display. In practice rare for TY page (seconds after order) but must be handled.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-06</div>
+      <div class="case-content">
+        <h4>User closes browser mid-PG flow</h4>
+        <p>PG popup/redirect is open, user closes tab. PG may still complete in background (esp. UPI). PG webhook will arrive at GoKwik backend regardless. If payment succeeded → background job completes Shopify edit. Session goes COMPLETED. If user returns to TY page, they see the updated order.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-07</div>
+      <div class="case-content">
+        <h4>Shopify API rate limit hit (429 error)</h4>
+        <p>Shopify allows 40 req/sec per app. During peak traffic (flash sale), order edits may get throttled. Use exponential backoff: retry after 1s, 2s, 4s, max 3 retries. If all fail, park in retry queue (SQS/Redis) with 60-second delay. Session stays <code>SHOPIFY_EDIT_PENDING</code>. Money is safe — refund only after all retries exhausted.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-08</div>
+      <div class="case-content">
+        <h4>Original order gets cancelled while upsell is in progress</h4>
+        <p>Rare but possible (fraud check, customer calls support). <code>orderEditBegin</code> will fail on a cancelled order. Trigger auto-refund. Mark session <code>SHOPIFY_EDIT_FAILED</code> with reason "Order cancelled."</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-09</div>
+      <div class="case-content">
+        <h4>Upsell product is the same as an item already in the order</h4>
+        <p>User bought Product A, upsell shows Product A (same variant). If user adds → Shopify order will have 2 line items or qty=2 for the same variant. Backend should flag this scenario — either skip showing the product or use <code>orderEditSetQuantity</code> to increment quantity instead of adding a duplicate line item.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-10</div>
+      <div class="case-content">
+        <h4>Merchant's Shopify store has order editing disabled</h4>
+        <p>Some Shopify plans or configurations restrict order editing. <code>orderEditBegin</code> returns permission error. Mitigation: During merchant onboarding for upsell feature, verify order edit permissions. If not available, feature is greyed out in GoKwik dashboard.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-11</div>
+      <div class="case-content">
+        <h4>Price mismatch between GoKwik and Shopify</h4>
+        <p>Product price changed on Shopify between recommendation fetch (Step 3) and order edit (Step 8). User was charged old price via PG. When <code>orderEditAddVariant</code> fires, Shopify uses current price. If delta exists → flag discrepancy in <code>upsell_sessions</code> and alert ops. Small deltas can be absorbed; large deltas should trigger review.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-12</div>
+      <div class="case-content">
+        <h4>Partial refund on original order after upsell was added</h4>
+        <p>Customer requests partial refund on original item. The upsell item is still valid and paid. Shopify handles this via standard refund flow — refund the original line item amount. Upsell transaction is separate and unaffected. Merchant must be aware of this in their refund workflow.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-13</div>
+      <div class="case-content">
+        <h4>Multiple PG webhooks arrive for same upsell payment</h4>
+        <p>PG sometimes sends duplicate webhooks. Use <code>upsell_txn_id</code> + <code>payment_id</code> as dedup key. On receiving webhook, check if session is already past <code>PG_SUCCESS</code> state — if yes, ignore. Idempotent processing is mandatory.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-14</div>
+      <div class="case-content">
+        <h4>Shipping cost changes after upsell item is added</h4>
+        <p>If the merchant has weight-based or item-count-based shipping rules, adding an upsell item could change shipping cost. <code>orderEditAddVariant</code>'s response includes recalculated shipping. If shipping increases, we have a problem — the upsell PG charge only covered the product price. Phase 1 mitigation: assume free shipping for upsell items or build the shipping delta into the upsell price. Document for dev team discussion.</p>
+      </div>
+    </div>
+    <div class="case-card">
+      <div class="case-id ec">EC-15</div>
+      <div class="case-content">
+        <h4>GoKwik backend goes down after PG success but before Shopify edit</h4>
+        <p>PG payment succeeded, webhook received, but GoKwik service crashes before Shopify edit. On restart, a recovery job queries <code>upsell_sessions WHERE status = 'PG_SUCCESS' AND updated_at < NOW() - 5 min</code> and resumes the Shopify edit flow. This is why the state machine is critical — it enables recovery from any crash point.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 11 -->
+<div class="section">
+  <div class="sec-num">SECTION 11</div>
+  <h2>Phase Roadmap</h2>
+
+  <div class="phase-box">
+    <h4><span class="scope-badge scope-p1">PHASE 1</span> Core Upsell Flow (This Build)</h4>
+    <ul>
+      <li>GoKwik TY page upsell section — carousel with product cards</li>
+      <li>Static rule engine → recommendations API</li>
+      <li>PG integration for upsell payment (new txn, same order)</li>
+      <li>Shopify Order Edit API integration (add item)</li>
+      <li>Shopify Transaction push</li>
+      <li>upsell_sessions + upsell_offers_log tables</li>
+      <li>Basic analytics: impressions, clicks, conversions, revenue</li>
+      <li>Auto-refund on Shopify edit failure</li>
+      <li>Idempotency + dedup + retry logic</li>
+    </ul>
+  </div>
+
+  <div class="phase-box">
+    <h4><span class="scope-badge scope-p2">PHASE 2</span> Optimization & COD Support</h4>
+    <ul>
+      <li>COD order upsell — upsell via prepaid payment on COD orders</li>
+      <li>COD order upsell — upsell added to COD amount (increased COD at delivery)</li>
+      <li>Multi-step funnel: upsell → downsell if declined</li>
+      <li>Upsell with discount engine integration (coupon-based offers)</li>
+      <li>A/B testing framework (compare different upsell products/titles)</li>
+      <li>Merchant dashboard — upsell performance analytics</li>
+      <li>Shipping cost handling for weight-based shipping merchants</li>
+    </ul>
+  </div>
+
+  <div class="phase-box">
+    <h4><span class="scope-badge scope-future">FUTURE</span> AI & Marketplace</h4>
+    <ul>
+      <li>ML-based recommendation engine (collaborative filtering on GoKwik's cross-merchant data)</li>
+      <li>Cross-brand marketplace upsell (for platforms, not single-brand stores)</li>
+      <li>Dynamic pricing and discount optimization</li>
+      <li>Multiple upsell items in a single session</li>
+      <li>Post-purchase email upsell sequence</li>
+      <li>Generative AI for offer copy and personalization</li>
+    </ul>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="margin-top: 48px; padding-top: 20px; border-top: 2px solid var(--ink); font-size: 12px; color: var(--muted);">
+  <strong>Document version:</strong> 1.0 &nbsp;|&nbsp; <strong>Last updated:</strong> April 9, 2026 &nbsp;|&nbsp; <strong>Author:</strong> Product &nbsp;|&nbsp; <strong>Status:</strong> Ready for dev review — please flag any API assumptions that don't match current implementation.
+</div>
+
+</div>
+</body>
+</html>

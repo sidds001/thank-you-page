@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoKwik Upsell Engine — Interactive Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --success-500: #17b26a;
+  --success-50: #ecfdf3;
+  --neutral-900: #405065;
+  --neutral-800: #556376;
+  --neutral-700: #697687;
+  --neutral-500: #929CA8;
+  --neutral-300: #BBC2CA;
+  --neutral-200: #D0D5DA;
+  --neutral-100: #E4E8EB;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --white: #FFFFFF;
+  --black: #000000;
+  --blue-500: #0052cc;
+  --blue-50: #e6effa;
+  --orange-500: #f59e0b;
+  --red-500: #ef4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: #0f1117; color: #fff; min-height: 100vh; }
+
+/* Top bar */
+.topbar {
+  background: #1a1d27;
+  border-bottom: 1px solid #2a2d37;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.topbar-logo {
+  width: 28px; height: 28px;
+  background: var(--success-500);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12px; color: #fff;
+}
+.topbar h1 { font-size: 15px; font-weight: 600; }
+.topbar-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(23,178,106,0.15);
+  color: var(--success-500);
+  padding: 3px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.spec-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #0052cc, #0747a6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 12px rgba(0,82,204,0.3);
+}
+.spec-cta:hover {
+  box-shadow: 0 4px 20px rgba(0,82,204,0.45);
+  transform: translateY(-1px);
+}
+.spec-cta svg { flex-shrink: 0; }
+
+/* Progress bar */
+.progress-bar {
+  background: #1a1d27;
+  padding: 12px 24px;
+  border-bottom: 1px solid #2a2d37;
+}
+.progress-steps {
+  display: flex;
+  gap: 4px;
+}
+.p-step {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #2a2d37;
+  transition: background 0.5s ease;
+}
+.p-step.active { background: var(--success-500); }
+.p-step.current { background: var(--orange-500); animation: pulse-bar 1.5s infinite; }
+@keyframes pulse-bar { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.step-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.3px;
+}
+.step-labels span.active-label { color: var(--success-500); }
+.step-labels span.current-label { color: var(--orange-500); }
+
+/* Main layout */
+.main {
+  display: flex;
+  height: calc(100vh - 100px);
+}
+
+/* Phone frame */
+.phone-side {
+  flex: 0 0 420px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid #2a2d37;
+}
+.phone-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--neutral-500);
+  margin-bottom: 12px;
+}
+.phone-frame {
+  width: 375px;
+  height: calc(100vh - 200px);
+  background: var(--white);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 0 0 4px #2a2d37, 0 20px 60px rgba(0,0,0,0.5);
+  position: relative;
+}
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  color: var(--neutral-900);
+  font-size: 13px;
+}
+
+/* Phone screen content */
+.brand-bar {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--neutral-100);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-logo {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--black);
+  letter-spacing: -0.5px;
+}
+
+.confirm-section {
+  padding: 20px 16px 16px;
+  text-align: left;
+}
+.confirm-icon {
+  width: 36px; height: 36px;
+  background: var(--success-50);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+}
+.confirm-icon svg { width: 20px; height: 20px; color: var(--success-500); }
+.confirm-title { font-size: 18px; font-weight: 600; color: var(--neutral-900); margin-bottom: 4px; }
+.confirm-order { font-size: 13px; color: var(--neutral-700); }
+.confirmed-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--success-50);
+  color: var(--success-500);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.order-summary-section {
+  padding: 12px 16px;
+  border-top: 6px solid var(--gray-100);
+}
+.section-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neutral-900);
+  margin-bottom: 10px;
+}
+.product-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  align-items: center;
+}
+.product-img {
+  width: 56px; height: 56px;
+  background: var(--gray-100);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+.product-info { flex: 1; }
+.product-name { font-size: 13px; font-weight: 500; color: var(--neutral-900); }
+.product-variant { font-size: 11px; color: var(--neutral-700); margin-top: 2px; }
+.product-price { font-size: 14px; font-weight: 600; color: var(--neutral-900); text-align: right; }
+
+.price-breakdown {
+  border-top: 1px solid var(--neutral-100);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 12px;
+  color: var(--neutral-700);
+}
+.price-row.total {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neutral-900);
+  border-top: 1px solid var(--neutral-200);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* UPSELL section */
+.upsell-section {
+  padding: 16px;
+  border-top: 6px solid var(--gray-100);
+  transition: all 0.4s ease;
+}
+.upsell-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neutral-900);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.upsell-card {
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.upsell-img {
+  width: 64px; height: 64px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.upsell-info { flex: 1; }
+.upsell-name { font-size: 13px; font-weight: 600; color: var(--neutral-900); }
+.upsell-variant-sel { font-size: 11px; color: var(--neutral-700); margin-top: 2px; }
+.upsell-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+}
+.upsell-price { font-size: 15px; font-weight: 700; color: var(--neutral-900); }
+.upsell-mrp { font-size: 12px; color: var(--neutral-500); text-decoration: line-through; }
+.upsell-cta {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--success-500);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.upsell-cta:hover { background: #15a35f; }
+.upsell-cta:disabled { background: var(--neutral-300); cursor: not-allowed; }
+.upsell-cta.processing {
+  background: var(--orange-500);
+  animation: pulse-cta 1.2s infinite;
+}
+@keyframes pulse-cta { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+.upsell-cta.success { background: var(--success-500); }
+
+.upsell-added {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: var(--success-50);
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success-500);
+}
+
+/* PG overlay */
+.pg-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+  padding: 20px 16px;
+  z-index: 10;
+  transform: translateY(100%);
+  transition: transform 0.4s ease;
+}
+.pg-overlay.show { transform: translateY(0); }
+.pg-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--neutral-900); }
+.pg-amount { font-size: 20px; font-weight: 700; color: var(--neutral-900); margin-bottom: 16px; }
+.pg-methods { display: flex; flex-direction: column; gap: 8px; }
+.pg-method {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.pg-method:hover { border-color: var(--success-500); }
+.pg-method.selected { border-color: var(--success-500); background: var(--success-50); }
+.pg-method-icon {
+  width: 32px; height: 32px;
+  background: var(--gray-100);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.pg-method-name { font-size: 13px; font-weight: 500; }
+.pg-pay-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--success-500);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+
+.trust-bar {
+  padding: 16px;
+  border-top: 6px solid var(--gray-100);
+  text-align: center;
+  font-size: 11px;
+  color: var(--neutral-500);
+}
+.powered-by {
+  padding: 10px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--neutral-500);
+}
+
+/* Backend panel */
+.backend-side {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+.backend-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--neutral-500);
+  margin-bottom: 12px;
+}
+.log-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.log-entry {
+  background: #1a1d27;
+  border: 1px solid #2a2d37;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.log-icon {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.log-icon.frontend { background: rgba(0,82,204,0.2); color: #5a9eff; }
+.log-icon.backend { background: rgba(23,178,106,0.2); color: var(--success-500); }
+.log-icon.pg { background: rgba(245,158,11,0.2); color: var(--orange-500); }
+.log-icon.shopify { background: rgba(139,92,246,0.2); color: #a78bfa; }
+.log-icon.db { background: rgba(236,72,153,0.2); color: #f472b6; }
+.log-icon.error { background: rgba(239,68,68,0.2); color: var(--red-500); }
+
+.log-body { flex: 1; }
+.log-time { font-size: 10px; color: #555; font-family: monospace; }
+.log-msg { color: #ccc; margin-top: 2px; }
+.log-msg strong { color: #fff; }
+.log-msg code {
+  background: #2a2d37;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #a78bfa;
+}
+.log-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+.log-status.ok { background: rgba(23,178,106,0.2); color: var(--success-500); }
+.log-status.pending { background: rgba(245,158,11,0.2); color: var(--orange-500); }
+.log-status.info { background: rgba(0,82,204,0.2); color: #5a9eff; }
+
+/* Controls */
+.controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1d27;
+  border-top: 1px solid #2a2d37;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+}
+.ctrl-info {
+  font-size: 13px;
+  color: #888;
+}
+.ctrl-info strong { color: #fff; }
+.ctrl-btn {
+  padding: 8px 24px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.ctrl-btn.primary { background: var(--success-500); color: #fff; }
+.ctrl-btn.primary:hover { background: #15a35f; }
+.ctrl-btn.secondary { background: #2a2d37; color: #ccc; margin-right: 8px; }
+.ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .main { flex-direction: column; height: auto; }
+  .phone-side { flex: none; width: 100%; border-right: none; border-bottom: 1px solid #2a2d37; }
+  .phone-frame { width: 340px; height: 500px; }
+  .backend-side { min-height: 300px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">G</div>
+    <h1>Post-Checkout Upsell Engine</h1>
+    <span class="topbar-badge">Interactive Simulation</span>
+  </div>
+  <div class="topbar-right">
+    <div style="font-size:12px; color:#666;">Click "Next Step" to walk through the flow</div>
+    <a href="tech-spec.html" target="_blank" class="spec-cta">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      View Full Technical Spec
+    </a>
+  </div>
+</div>
+
+<div class="progress-bar">
+  <div class="progress-steps" id="progressSteps"></div>
+  <div class="step-labels" id="stepLabels"></div>
+</div>
+
+<div class="main">
+  <!-- Phone -->
+  <div class="phone-side">
+    <div class="phone-label">What the Customer Sees</div>
+    <div class="phone-frame">
+      <div class="phone-screen" id="phoneScreen"></div>
+    </div>
+  </div>
+  <!-- Backend -->
+  <div class="backend-side">
+    <div class="backend-label">What Happens Behind the Scenes</div>
+    <div class="log-container" id="logContainer"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-info" id="ctrlInfo"></div>
+  <div>
+    <button class="ctrl-btn secondary" id="resetBtn" onclick="resetSim()">Reset</button>
+    <button class="ctrl-btn primary" id="nextBtn" onclick="nextStep()">Start Simulation →</button>
+  </div>
+</div>
+
+<script>
+const steps = [
+  {
+    name: "Order Completed",
+    label: "Checkout",
+    phone: "order-confirmed",
+    logs: [
+      { icon: "frontend", time: "00:00.000", msg: "Customer completed checkout for <strong>Levi's 568 Navy Jeans</strong> — ₹3,299" },
+      { icon: "pg", time: "00:00.120", msg: "Payment captured via <strong>UPI</strong> on Easebuzz <span class='log-status ok'>SUCCESS</span>" },
+      { icon: "backend", time: "00:00.250", msg: "Order created: <code>gokwik_order_id: KWIK01W5CO5Y4050758</code>" },
+      { icon: "shopify", time: "00:00.480", msg: "Shopify order created: <code>#4595912</code> <span class='log-status ok'>CONFIRMED</span>" },
+      { icon: "frontend", time: "00:00.600", msg: "Redirecting to <strong>GoKwik Thank You Page</strong>..." },
+    ]
+  },
+  {
+    name: "TY Page Loads",
+    label: "TY Page",
+    phone: "ty-page-base",
+    logs: [
+      { icon: "frontend", time: "00:01.000", msg: "GoKwik TY page rendered with order summary" },
+      { icon: "frontend", time: "00:01.050", msg: "Upsell section: <span class='log-status pending'>LOADING</span> (skeleton shimmer)" },
+      { icon: "backend", time: "00:01.100", msg: "<code>GET /upsell/recommendations?order_id=KWIK01W5CO5Y&merchant_id=levis</code>" },
+      { icon: "db", time: "00:01.150", msg: "Querying upsell rules → <strong>Rule 5</strong> matched (All Products, 2 configured items)" },
+    ]
+  },
+  {
+    name: "Upsell Shown",
+    label: "Recs Loaded",
+    phone: "ty-page-upsell",
+    logs: [
+      { icon: "backend", time: "00:01.200", msg: "Checking inventory on Shopify for 2 upsell candidates..." },
+      { icon: "shopify", time: "00:01.400", msg: "Antidote '13' Tee — <strong>In Stock</strong> (23 units), ₹1,999" },
+      { icon: "shopify", time: "00:01.420", msg: "3/4 Sleeve Kimono Dress — <strong>In Stock</strong> (8 units), ₹2,499" },
+      { icon: "backend", time: "00:01.500", msg: "Returning 2 products to frontend <span class='log-status ok'>200 OK</span>" },
+      { icon: "frontend", time: "00:01.550", msg: "Rendering upsell carousel: <strong>\"Complete Your Look\"</strong>" },
+      { icon: "db", time: "00:01.600", msg: "Logged: <code>upsell_offers_log</code> → outcome: <strong>SHOWN</strong> (impression tracked)" },
+    ]
+  },
+  {
+    name: "User Clicks Add",
+    label: "Add Clicked",
+    phone: "ty-page-clicked",
+    logs: [
+      { icon: "frontend", time: "00:08.200", msg: "User clicked <strong>\"Add to Order — ₹1,999\"</strong> for Antidote Tee (Size M)" },
+      { icon: "backend", time: "00:08.250", msg: "<code>POST /upsell/initiate</code> → validating request..." },
+      { icon: "backend", time: "00:08.280", msg: "Idempotency check: <code>SHA256(order+variant+amt)</code> → <span class='log-status ok'>NO DUPLICATE</span>" },
+      { icon: "backend", time: "00:08.300", msg: "Inventory re-check: Antidote Tee / M → <strong>22 units available</strong> ✓" },
+      { icon: "db", time: "00:08.350", msg: "Created <code>upsell_sessions</code> record → status: <strong>INITIATED</strong>" },
+      { icon: "pg", time: "00:08.400", msg: "Calling Easebuzz Init API → txn_id: <code>KWIK_UP_W5CO5Y_1712645420</code>, amount: ₹1,999" },
+      { icon: "pg", time: "00:08.600", msg: "PG SDK params received <span class='log-status ok'>READY</span>" },
+      { icon: "db", time: "00:08.650", msg: "Session status → <strong>PG_PENDING</strong>" },
+    ]
+  },
+  {
+    name: "Payment Flow",
+    label: "PG Open",
+    phone: "ty-page-pg",
+    logs: [
+      { icon: "frontend", time: "00:08.700", msg: "Opening Easebuzz payment popup on TY page..." },
+      { icon: "frontend", time: "00:08.800", msg: "Customer selects <strong>Credit Card</strong> (different from original UPI!)" },
+      { icon: "pg", time: "00:12.500", msg: "Customer enters card details, processing..." },
+    ]
+  },
+  {
+    name: "Payment Success",
+    label: "PG Success",
+    phone: "ty-page-pg-success",
+    logs: [
+      { icon: "pg", time: "00:15.200", msg: "Payment <span class='log-status ok'>SUCCESS</span> — <code>payment_id: EZB_PAY_98765</code>, amount: ₹1,999, method: Credit Card" },
+      { icon: "backend", time: "00:15.300", msg: "PG webhook received and validated" },
+      { icon: "db", time: "00:15.350", msg: "Session status → <strong>PG_SUCCESS</strong>" },
+      { icon: "db", time: "00:15.380", msg: "Inserted into <code>upsell_transactions</code>: original_payment + upsell_payment linked to same order" },
+      { icon: "db", time: "00:15.400", msg: "Updated <code>payments</code> table: new row with <code>payment_type: 'upsell'</code>" },
+      { icon: "backend", time: "00:15.450", msg: "Queuing async job: <strong>Shopify Order Edit</strong> <span class='log-status pending'>QUEUED</span>" },
+    ]
+  },
+  {
+    name: "Shopify Edit",
+    label: "Order Edit",
+    phone: "ty-page-syncing",
+    logs: [
+      { icon: "shopify", time: "00:15.600", msg: "<code>orderEditBegin(Order #4595912)</code> <span class='log-status ok'>200</span> → calculatedOrder ID received" },
+      { icon: "shopify", time: "00:15.900", msg: "<code>orderEditAddVariant(Antidote Tee / M, qty: 1)</code> <span class='log-status ok'>200</span> → line item added" },
+      { icon: "shopify", time: "00:16.200", msg: "<code>orderEditCommit(staffNote: 'GoKwik Post-Checkout Upsell')</code> <span class='log-status ok'>200</span>" },
+      { icon: "db", time: "00:16.250", msg: "Session status → <strong>SHOPIFY_EDIT_DONE</strong>" },
+      { icon: "shopify", time: "00:16.500", msg: "<code>POST /orders/4595912/transactions.json</code> → gateway: gokwik_upsell, amount: ₹1,999 <span class='log-status ok'>CREATED</span>" },
+      { icon: "db", time: "00:16.550", msg: "Session status → <strong>COMPLETED</strong> ✅" },
+      { icon: "db", time: "00:16.600", msg: "Updated <code>upsell_offers_log</code> → outcome: <strong>PAID</strong>" },
+    ]
+  },
+  {
+    name: "Done!",
+    label: "Complete",
+    phone: "ty-page-done",
+    logs: [
+      { icon: "frontend", time: "00:16.700", msg: "TY page updated — showing <strong>revised order summary</strong> with upsell item" },
+      { icon: "frontend", time: "00:16.750", msg: "Upsell section → <strong>\"✓ Added to your order!\"</strong>" },
+      { icon: "backend", time: "00:16.800", msg: "🎉 <strong>Flow complete</strong> — Order #4595912 now has 2 items, 2 transactions" },
+      { icon: "backend", time: "00:16.850", msg: "Merchant sees on Shopify Admin: 1 order, 2 items, 2 payments (UPI ₹3,299 + Card ₹1,999)" },
+      { icon: "db", time: "00:16.900", msg: "Analytics: impression → click → payment → order_edit → <span class='log-status ok'>COMPLETED</span>" },
+    ]
+  }
+];
+
+let currentStep = -1;
+
+function renderProgressBar() {
+  const stepsHtml = steps.map((_, i) => {
+    let cls = 'p-step';
+    if (i < currentStep) cls += ' active';
+    else if (i === currentStep) cls += ' current';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+  document.getElementById('progressSteps').innerHTML = stepsHtml;
+
+  const labelsHtml = steps.map((s, i) => {
+    let cls = '';
+    if (i < currentStep) cls = 'active-label';
+    else if (i === currentStep) cls = 'current-label';
+    return `<span class="${cls}">${s.label}</span>`;
+  }).join('');
+  document.getElementById('stepLabels').innerHTML = labelsHtml;
+}
+
+function renderPhone(state) {
+  const screen = document.getElementById('phoneScreen');
+  let html = '';
+
+  // Brand bar
+  html += `<div class="brand-bar"><span class="brand-logo">LEVI'S</span></div>`;
+
+  // Confirmation
+  html += `<div class="confirm-section">
+    <div class="confirm-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <div class="confirm-title">Thanks for your order!</div>
+    <div class="confirm-order">Order ID: #1468283 <span class="confirmed-badge">Confirmed</span></div>
+  </div>`;
+
+  // Order summary - base items
+  const showUpsellInSummary = ['ty-page-done'].includes(state);
+  html += `<div class="order-summary-section">
+    <div class="section-header">Order Summary</div>
+    <div class="product-row">
+      <div class="product-img">👖</div>
+      <div class="product-info">
+        <div class="product-name">Men's 568 Navy Loose Fit Jeans</div>
+        <div class="product-variant">Navy Blue / 32 / 32</div>
+      </div>
+      <div class="product-price">₹3,299</div>
+    </div>`;
+
+  if (showUpsellInSummary) {
+    html += `<div class="product-row" style="animation: fadeIn 0.5s ease;">
+      <div class="product-img">👕</div>
+      <div class="product-info">
+        <div class="product-name">Antidote "13" Tee</div>
+        <div class="product-variant">Mood Indigo / M</div>
+      </div>
+      <div class="product-price">₹1,999</div>
+    </div>`;
+  }
+
+  html += `<div class="price-breakdown">
+    <div class="price-row"><span>MRP Total</span><span>₹${showUpsellInSummary ? '5,298' : '3,299'}</span></div>
+    <div class="price-row"><span>Discount</span><span style="color:var(--success-500)">-₹3,299</span></div>
+    <div class="price-row"><span>Shipping</span><span>₹0</span></div>
+    <div class="price-row total"><span>Total</span><span>₹${showUpsellInSummary ? '1,999' : '0'}</span></div>
+  </div></div>`;
+
+  // Upsell states
+  if (state === 'ty-page-base') {
+    html += `<div class="upsell-section"><div style="height:80px;background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;"></div></div>`;
+    html += `<style>@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>`;
+  }
+  else if (state === 'ty-page-upsell') {
+    html += renderUpsellSection('default');
+  }
+  else if (state === 'ty-page-clicked') {
+    html += renderUpsellSection('processing');
+  }
+  else if (state === 'ty-page-pg' || state === 'ty-page-pg-success') {
+    html += renderUpsellSection('processing');
+    html += renderPGOverlay(state === 'ty-page-pg-success');
+  }
+  else if (state === 'ty-page-syncing') {
+    html += renderUpsellSection('syncing');
+  }
+  else if (state === 'ty-page-done') {
+    html += renderUpsellSection('done');
+  }
+
+  // Trust + footer
+  html += `<div class="trust-bar">🛡️ Trusted by 1.5 Lakh+ customers daily</div>`;
+  html += `<div class="powered-by">Powered by GoKwik</div>`;
+  html += `<div style="height:60px"></div>`;
+
+  screen.innerHTML = html;
+}
+
+function renderUpsellSection(mode) {
+  let html = `<div class="upsell-section">`;
+  html += `<div class="upsell-title">✨ Complete Your Look</div>`;
+  html += `<div class="upsell-card">
+    <div class="upsell-img">👕</div>
+    <div class="upsell-info">
+      <div class="upsell-name">Antidote "13" Tee in Mood Indigo</div>
+      <div class="upsell-variant-sel">Size: M</div>
+      <div class="upsell-price-row">
+        <span class="upsell-price">₹1,999</span>
+        <span class="upsell-mrp">₹2,499</span>
+      </div>
+    </div>
+  </div>`;
+
+  if (mode === 'default') {
+    html += `<button class="upsell-cta">Add to Order — ₹1,999</button>`;
+  } else if (mode === 'processing' || mode === 'syncing') {
+    const text = mode === 'syncing' ? 'Updating your order...' : 'Processing payment...';
+    html += `<button class="upsell-cta processing" disabled>${text}</button>`;
+  } else if (mode === 'done') {
+    html += `<div class="upsell-added"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg> Added to your order!</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderPGOverlay(success) {
+  return `<div class="pg-overlay show">
+    <div class="pg-title">${success ? '✅ Payment Successful!' : 'Pay for upsell item'}</div>
+    <div class="pg-amount">₹1,999</div>
+    ${success ? '<div style="font-size:13px;color:var(--success-500);font-weight:600;">Updating your order...</div>' : `
+    <div class="pg-methods">
+      <div class="pg-method"><div class="pg-method-icon">💳</div><div class="pg-method-name">Credit / Debit Card</div></div>
+      <div class="pg-method selected"><div class="pg-method-icon" style="font-size:18px;">📱</div><div class="pg-method-name">UPI</div></div>
+      <div class="pg-method"><div class="pg-method-icon">🏦</div><div class="pg-method-name">Net Banking</div></div>
+    </div>
+    <button class="pg-pay-btn">Pay ₹1,999</button>`}
+  </div>`;
+}
+
+function nextStep() {
+  currentStep++;
+  if (currentStep >= steps.length) {
+    document.getElementById('nextBtn').disabled = true;
+    document.getElementById('nextBtn').textContent = 'Simulation Complete ✓';
+    return;
+  }
+
+  const step = steps[currentStep];
+  renderProgressBar();
+  renderPhone(step.phone);
+
+  // Add logs with stagger
+  step.logs.forEach((log, i) => {
+    setTimeout(() => {
+      const container = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <div class="log-icon ${log.icon}">${getIcon(log.icon)}</div>
+        <div class="log-body">
+          <div class="log-time">${log.time}</div>
+          <div class="log-msg">${log.msg}</div>
+        </div>`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }, i * 200);
+  });
+
+  document.getElementById('ctrlInfo').innerHTML = `<strong>Step ${currentStep + 1}/${steps.length}:</strong> ${step.name}`;
+  document.getElementById('nextBtn').textContent = currentStep < steps.length - 1 ? 'Next Step →' : 'Complete ✓';
+}
+
+function resetSim() {
+  currentStep = -1;
+  document.getElementById('logContainer').innerHTML = '';
+  document.getElementById('phoneScreen').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:14px;text-align:center;padding:40px;">Click "Start Simulation" to begin the walkthrough</div>';
+  document.getElementById('nextBtn').disabled = false;
+  document.getElementById('nextBtn').textContent = 'Start Simulation →';
+  document.getElementById('ctrlInfo').innerHTML = 'Ready to start';
+  renderProgressBar();
+}
+
+function getIcon(type) {
+  const icons = {
+    frontend: 'FE', backend: 'GK', pg: 'PG', shopify: 'SH', db: 'DB', error: '!!'
+  };
+  return icons[type] || '??';
+}
+
+// Init
+renderProgressBar();
+document.getElementById('phoneScreen').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:14px;text-align:center;padding:40px;">Click "Start Simulation" to begin the walkthrough</div>';
+document.getElementById('ctrlInfo').innerHTML = 'Ready to start';
+</script>
+
+</body>
+</html>
